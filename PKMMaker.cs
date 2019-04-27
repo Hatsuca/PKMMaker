@@ -56,12 +56,26 @@ public class PKMMaker : EditorWindow {
 	尻尾 e_tail;
 	目色 e_eye;
 	髪色 e_hair_color;
+	//毛色個別設定用
+	髪色 e_eyebrow_color;
+	髪色 e_ear_color;
+	髪色 e_hair_b_color;
+	髪色 e_hair_f_color;
+	髪色 e_hair_s_color;
+	髪色 e_tail_color;
+	Color c_eyebrow_color = Color.white;
+	Color c_ear_color = Color.white;
+	Color c_hair_b_color = Color.white;
+	Color c_hair_f_color = Color.white;
+	Color c_hair_s_color = Color.white;
+	Color c_tail_color = Color.white;
 
 	Color clothesColor = Color.white;
 	Color hairColor = Color.white;
 	Color eyeColor = Color.white;
-	int hairColorType = 1;
 	bool disableClothes = false;
+	bool eachColorSetting;
+	bool randomizePKM;
 
 	String savePath;
 	bool isReset;
@@ -86,8 +100,6 @@ public class PKMMaker : EditorWindow {
 
 	//--------------------------------------------------------------------------
 	//あとやることリスト
-	//・生成マテリアルCullOffにする
-	//・色変更個別オプション
 	//・ランダム生成？
 	//・アイテム変更追加
 	//・ダイナミックボーンの出力オンオフ
@@ -176,10 +188,58 @@ public class PKMMaker : EditorWindow {
 		using (new GUILayout.VerticalScope (EditorStyles.helpBox)) {
 			GUILayout.Label ("色");
 		}
-		e_hair_color = (髪色)EditorGUILayout.EnumPopup ("毛色", e_hair_color);
-		e_eye = (目色)EditorGUILayout.EnumPopup ("目の色", e_eye);
+		using (new GUILayout.HorizontalScope ()) {
+			e_eye = (目色)EditorGUILayout.EnumPopup ("目の色", e_eye, GUILayout.Width(300));
+			eyeColor = EditorGUILayout.ColorField (eyeColor);
+		}
+		if (!eachColorSetting) {
+			EditorGUILayout.Space ();
+			using (new GUILayout.HorizontalScope ()) {
+				e_hair_color = (髪色)EditorGUILayout.EnumPopup ("毛色", e_hair_color, GUILayout.Width(300));
+				hairColor = EditorGUILayout.ColorField (hairColor);
+			}
+		} else {
+			using (new GUILayout.HorizontalScope ()) {
+				e_eyebrow_color = (髪色)EditorGUILayout.EnumPopup ("眉色", e_eyebrow_color, GUILayout.Width(300));
+				c_eyebrow_color = EditorGUILayout.ColorField (c_eyebrow_color);
+			}
+			EditorGUILayout.Space ();
+			using (new GUILayout.HorizontalScope ()) {
+				e_hair_b_color = (髪色)EditorGUILayout.EnumPopup ("後髪色", e_hair_b_color, GUILayout.Width(300));
+				c_hair_b_color = EditorGUILayout.ColorField (c_hair_b_color);
+			}
+			using (new GUILayout.HorizontalScope ()) {
+				e_hair_f_color = (髪色)EditorGUILayout.EnumPopup ("前髪色", e_hair_f_color, GUILayout.Width(300));
+				c_hair_f_color = EditorGUILayout.ColorField (c_hair_f_color);
+			}
+			using (new GUILayout.HorizontalScope ()) {
+				e_hair_s_color = (髪色)EditorGUILayout.EnumPopup ("横髪色", e_hair_s_color, GUILayout.Width(300));
+				c_hair_s_color = EditorGUILayout.ColorField (c_hair_s_color);
+			}
+			EditorGUILayout.Space ();
+			using (new GUILayout.HorizontalScope ()) {
+				e_ear_color = (髪色)EditorGUILayout.EnumPopup ("けもみみ色", e_ear_color, GUILayout.Width(300));
+				c_ear_color = EditorGUILayout.ColorField (c_ear_color);
+			}
+			using (new GUILayout.HorizontalScope ()) {
+				e_tail_color = (髪色)EditorGUILayout.EnumPopup ("尻尾色", e_tail_color, GUILayout.Width(300));
+				c_tail_color = EditorGUILayout.ColorField (c_tail_color);
+			}
+		}
+		EditorGUILayout.Space ();
+		clothesColor = EditorGUILayout.ColorField ("衣服色補正", clothesColor);
+
+		//スクロールここまで
+		EditorGUILayout.EndScrollView ();
+
+
+		randomizePKM = EditorGUILayout.Toggle ("ランダムぷちけも生成", randomizePKM);
+		EditorGUILayout.Space ();
+		eachColorSetting = EditorGUILayout.Toggle ("毛色の個別設定", eachColorSetting);
 		EditorGUILayout.Space ();
 
+
+		//変更点アップデート
 		if (EditorGUI.EndChangeCheck()) {
 			
 			clothes [CLOTHES].gameObject.SetActive (false);
@@ -196,23 +256,45 @@ public class PKMMaker : EditorWindow {
 
 			ResetColor ();
 
-			switch (e_hair_color) {
-			case 髪色.紺:
-				body[FACE_BACK].sharedMaterial = AssetDatabase.LoadAssetAtPath<Material> (texturePath + "body/Materials/face_back_1.mat");
-				bodyTex [TEX_FACE_BACK] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/face_back/face_back_1.png");
-				hairColorType = 1;
-				break;
-			case 髪色.黄:
-				body[FACE_BACK].sharedMaterial = AssetDatabase.LoadAssetAtPath<Material> (texturePath + "body/Materials/face_back_2.mat");
-				bodyTex [TEX_FACE_BACK] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/face_back/face_back_2.png");
-				hairColorType = 2;
-				break;
-			case 髪色.白:
-				body[FACE_BACK].sharedMaterial = AssetDatabase.LoadAssetAtPath<Material> (texturePath + "body/Materials/face_back_3.mat");
-				bodyTex [TEX_FACE_BACK] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/face_back/face_back_3.png");
-				hairColorType = 3;
-				break;
+			//ランダムぷちけも生成
+			if (randomizePKM) {
+				randomizePKM = false;
+				if (EditorUtility.DisplayDialog ("ぷちけもメーカー", "プチけもみみ娘をランダム生成します\nよろしいですか？\n(現在の状況は失われます)", "OK")) {
+					eachColorSetting = false;
+					e_clothes = (衣服)Enum.ToObject (typeof(衣服), UnityEngine.Random.Range (0, Enum.GetNames (typeof(衣服)).Length));
+					e_eyebrow = (眉)Enum.ToObject (typeof(眉), UnityEngine.Random.Range (0, Enum.GetNames (typeof(眉)).Length));
+					e_face = (顔)Enum.ToObject (typeof(顔), UnityEngine.Random.Range (0, Enum.GetNames (typeof(顔)).Length));
+					e_ear = (耳)Enum.ToObject (typeof(耳), UnityEngine.Random.Range (0, Enum.GetNames (typeof(耳)).Length));
+					e_mouth_def = (口)Enum.ToObject (typeof(口), UnityEngine.Random.Range (0, Enum.GetNames (typeof(口)).Length));
+					e_hair_b = (後髪)Enum.ToObject (typeof(後髪), UnityEngine.Random.Range (0, Enum.GetNames (typeof(後髪)).Length));
+					e_hair_f = (前髪)Enum.ToObject (typeof(前髪), UnityEngine.Random.Range (0, Enum.GetNames (typeof(前髪)).Length));
+					e_hair_s = (横髪)Enum.ToObject (typeof(横髪), UnityEngine.Random.Range (0, Enum.GetNames (typeof(横髪)).Length));
+					e_tail = (尻尾)Enum.ToObject (typeof(尻尾), UnityEngine.Random.Range (0, Enum.GetNames (typeof(尻尾)).Length));
+					e_eye = (目色)Enum.ToObject (typeof(目色), UnityEngine.Random.Range (0, Enum.GetNames (typeof(目色)).Length));
+					e_hair_color = (髪色)Enum.ToObject (typeof(髪色), UnityEngine.Random.Range (0, Enum.GetNames (typeof(髪色)).Length));
+				}
 			}
+
+			//毛色一括モード
+			if (!eachColorSetting) {
+				e_eyebrow_color = e_hair_color;
+				e_ear_color = e_hair_color;
+				e_hair_b_color = e_hair_color;
+				e_hair_f_color = e_hair_color;
+				e_hair_s_color = e_hair_color;
+				e_tail_color = e_hair_color;
+				c_eyebrow_color = hairColor;
+				c_ear_color = hairColor;
+				c_hair_b_color = hairColor;
+				c_hair_f_color = hairColor;
+				c_hair_s_color = hairColor;
+				c_tail_color = hairColor;
+			}
+
+			//後頭部色
+			body [FACE_BACK].sharedMaterial = AssetDatabase.LoadAssetAtPath<Material> (texturePath + "body/Materials/face_back_" +  ((int)e_hair_b_color + 1).ToString() + ".mat");
+			bodyTex [TEX_FACE_BACK] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/face_back/face_back_" +  ((int)e_hair_b_color + 1).ToString() + ".png");
+
 			switch (e_clothes) {
 			case 衣服.巫女服:
 				clothes [CLOTHES] = model.transform.Find (" clothes_1").GetComponent<SkinnedMeshRenderer> ();
@@ -259,23 +341,23 @@ public class PKMMaker : EditorWindow {
 			switch (e_eyebrow) {
 			case 眉.眉1:
 				body [EYEBROW] = model.transform.Find (" eyebrow_1").GetComponent<SkinnedMeshRenderer> ();
-				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + hairColorType.ToString() + ".png");
+				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + ((int)e_eyebrow_color + 1).ToString() + ".png");
 				break;
 			case 眉.眉2:
 				body[EYEBROW] = model.transform.Find (" eyebrow_2").GetComponent<SkinnedMeshRenderer>();
-				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + hairColorType.ToString() + ".png");
+				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + ((int)e_eyebrow_color + 1).ToString() + ".png");
 				break;
 			case 眉.眉3:
 				body[EYEBROW] = model.transform.Find (" eyebrow_3").GetComponent<SkinnedMeshRenderer>();
-				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + hairColorType.ToString() + ".png");
+				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + ((int)e_eyebrow_color + 1).ToString() + ".png");
 				break;
 			case 眉.眉4:
 				body[EYEBROW] = model.transform.Find (" eyebrow_4").GetComponent<SkinnedMeshRenderer>();
-				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + hairColorType.ToString() + ".png");
+				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + ((int)e_eyebrow_color + 1).ToString() + ".png");
 				break;
 			case 眉.眉5:
 				body[EYEBROW] = model.transform.Find (" eyebrow_5").GetComponent<SkinnedMeshRenderer>();
-				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + hairColorType.ToString() + ".png");
+				bodyTex [TEX_EYEBROW] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eyebrow/eyebrow_" + ((int)e_eyebrow_color + 1).ToString() + ".png");
 				break;
 			}
 			switch (e_face) {
@@ -304,124 +386,124 @@ public class PKMMaker : EditorWindow {
 			case 耳.猫耳:
 				hair[EAR] = model.transform.Find (" ear_cat").GetComponent<SkinnedMeshRenderer>();
 				hair[EAR_C] = model.transform.Find (" ear_cat_c").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + hairColorType.ToString() + "/ear_cat.png");
+				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + ((int)e_ear_color + 1).ToString() + "/ear_cat.png");
 				hairTex [TEX_EAR_C] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/ear_cat_c.png");
 				break;
 			case 耳.狐耳:
 				hair[EAR] = model.transform.Find (" ear_fox").GetComponent<SkinnedMeshRenderer>();
 				hair[EAR_C] = model.transform.Find (" ear_fox_c").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + hairColorType.ToString() + "/ear_fox.png");
+				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + ((int)e_ear_color + 1).ToString() + "/ear_fox.png");
 				hairTex [TEX_EAR_C] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/ear_fox_c.png");
 				break;
 			case 耳.兎耳:
 				hair[EAR] = model.transform.Find (" ear_rabbit").GetComponent<SkinnedMeshRenderer>();
 				hair[EAR_C] = model.transform.Find (" ear_rabbit_c").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + hairColorType.ToString() + "/ear_rabbit.png");
+				hairTex [TEX_EAR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/" + ((int)e_ear_color + 1).ToString() + "/ear_rabbit.png");
 				hairTex [TEX_EAR_C] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/ear/ear_rabbit_c.png");
 				break;
 			}
 			switch (e_hair_b) {
 			case 後髪.長髪:
 				hair[HAIR_B] = model.transform.Find (" hair_b_1").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_1.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_1.png");
 				break;
 			case 後髪.短髪:
 				hair[HAIR_B] = model.transform.Find (" hair_b_2").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_2.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_2.png");
 				break;
 			case 後髪.ツインロール:
 				hair[HAIR_B] = model.transform.Find (" hair_b_3").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_3.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_3.png");
 				break;
 			case 後髪.おさげ1:
 				hair[HAIR_B] = model.transform.Find (" hair_b_4").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_4.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_4.png");
 				break;
 			case 後髪.ツインテール:
 				hair[HAIR_B] = model.transform.Find (" hair_b_5").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_5.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_5.png");
 				break;
 			case 後髪.おさげ2:
 				hair[HAIR_B] = model.transform.Find (" hair_b_6").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_6.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_6.png");
 				break;
 			case 後髪.外ハネ:
 				hair[HAIR_B] = model.transform.Find (" hair_b_7").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_7.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_7.png");
 				break;
 			case 後髪.ポニーテール:
 				hair[HAIR_B] = model.transform.Find (" hair_b_8").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + hairColorType.ToString() + "/hair_b_8.png");
+				hairTex [TEX_HAIR_B] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_b/" + ((int)e_hair_b_color + 1).ToString() + "/hair_b_8.png");
 				break;
 			}
 			switch (e_hair_f) {
 			case 前髪.普通1:
 				hair[HAIR_F] = model.transform.Find (" hair_f_1").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_1.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_1.png");
 				break;
 			case 前髪.一本垂らし:
 				hair[HAIR_F] = model.transform.Find (" hair_f_2").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_2.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_2.png");
 				break;
 			case 前髪.普通2:
 				hair[HAIR_F] = model.transform.Find (" hair_f_3").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_3.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_3.png");
 				break;
 			case 前髪.短い:
 				hair[HAIR_F] = model.transform.Find (" hair_f_4").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_4.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_4.png");
 				break;
 			case 前髪.目隠れ:
 				hair[HAIR_F] = model.transform.Find (" hair_f_5").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_5.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_5.png");
 				break;
 			case 前髪.目隠れ2:
 				hair[HAIR_F] = model.transform.Find (" hair_f_6").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_6.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_6.png");
 				break;
 			case 前髪.左右分け:
 				hair[HAIR_F] = model.transform.Find (" hair_f_7").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + hairColorType.ToString() + "/hair_f_7.png");
+				hairTex [TEX_HAIR_F] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_f/" + ((int)e_hair_f_color + 1).ToString() + "/hair_f_7.png");
 				break;
 			}
 			switch (e_hair_s) {
 			case 横髪.普通:
 				hair[HAIR_S] = model.transform.Find (" hair_s_1").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_1.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_1.png");
 				break;
 			case 横髪.長い:
 				hair[HAIR_S] = model.transform.Find (" hair_s_2").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_2.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_2.png");
 				break;
 			case 横髪.短い:
 				hair[HAIR_S] = model.transform.Find (" hair_s_3").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_3.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_3.png");
 				break;
 			case 横髪.ふっくら:
 				hair[HAIR_S] = model.transform.Find (" hair_s_4").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_4.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_4.png");
 				break;
 			case 横髪.結び:
 				hair[HAIR_S] = model.transform.Find (" hair_s_5").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_5.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_5.png");
 				break;
 			case 横髪.外ハネ:
 				hair[HAIR_S] = model.transform.Find (" hair_s_6").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + hairColorType.ToString() + "/hair_s_6.png");
+				hairTex [TEX_HAIR_S] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/hair_s/" + ((int)e_hair_s_color + 1).ToString() + "/hair_s_6.png");
 				break;
 			}
 			switch (e_tail) {
 			case 尻尾.猫尻尾:
 				hair[TAIL] = model.transform.Find (" tail_cat").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + hairColorType.ToString() + "/tail_cat.png");
+				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + ((int)e_tail_color + 1).ToString() + "/tail_cat.png");
 				break;
 			case 尻尾.狐尻尾:
 				hair[TAIL] = model.transform.Find (" tail_fox").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + hairColorType.ToString() + "/tail_fox.png");
+				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + ((int)e_tail_color + 1).ToString() + "/tail_fox.png");
 				break;
 			case 尻尾.兎尻尾:
 				hair[TAIL] = model.transform.Find (" tail_rabbit").GetComponent<SkinnedMeshRenderer>();
-				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + hairColorType.ToString() + "/tail_rabbit.png");
+				hairTex [TEX_TAIL] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "hair/tail/" + ((int)e_tail_color + 1).ToString() + "/tail_rabbit.png");
 				break;
 			}
 			switch (e_eye) {
@@ -464,18 +546,9 @@ public class PKMMaker : EditorWindow {
 			hair [EAR_C].gameObject.SetActive (true);
 		}
 			
-		//色補正
-		EditorGUI.BeginChangeCheck ();
-		clothesColor = EditorGUILayout.ColorField ("衣服色補正", clothesColor);
-		hairColor = EditorGUILayout.ColorField ("毛色補正", hairColor);
-		eyeColor = EditorGUILayout.ColorField ("目色補正", eyeColor);
-		if (EditorGUI.EndChangeCheck ())
-			SetColor ();
 
 
-		EditorGUILayout.EndScrollView ();
-
-		if (GUILayout.Button ("エクスポート", GUI.skin.button)) {
+		if (GUILayout.Button ("エクスポート", GUI.skin.button, GUILayout.Height(30))) {
 			
 			savePath = EditorUtility.SaveFolderPanel ("エクスポート", "Assets", "");
 			if (!String.IsNullOrEmpty (savePath)) {
@@ -615,14 +688,17 @@ public class PKMMaker : EditorWindow {
 		//---マテリアル設定
 		bodyMat = new Material(Shader.Find(shader));
 		bodyMat.SetTexture ("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(savePath + "/Texture/Body.png"));
+		bodyMat.SetInt ("_CullMode", 0);
 		hairMat = new Material (Shader.Find(shader));
 		hairMat.SetTexture ("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(savePath + "/Texture/Hair.png"));
+		hairMat.SetInt ("_CullMode", 0);
 		//マテリアル保存
 		AssetDatabase.CreateAsset(bodyMat, savePath + "/Texture/Material/Body.mat");
 		AssetDatabase.CreateAsset(hairMat, savePath + "/Texture/Material/Hair.mat");
 		if (!disableClothes) {
 			clothesMat = new Material (Shader.Find(shader));
 			clothesMat.SetTexture ("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(savePath + "/Texture/Clothes.png"));
+			clothesMat.SetInt ("_CullMode", 0);
 			AssetDatabase.CreateAsset(clothesMat, savePath + "/Texture/Material/Clothes.mat");
 		}
 		AssetDatabase.SaveAssets ();
@@ -777,13 +853,13 @@ public class PKMMaker : EditorWindow {
 
 	void SetColor() {
 		clothes [CLOTHES].sharedMaterial.SetColor ("_Color", clothesColor);
-		hair [EAR].sharedMaterial.SetColor("_Color", hairColor);
-		hair [HAIR_B].sharedMaterial.SetColor("_Color", hairColor);
-		hair [HAIR_F].sharedMaterial.SetColor("_Color", hairColor);
-		hair [HAIR_S].sharedMaterial.SetColor("_Color", hairColor);
-		hair [TAIL].sharedMaterial.SetColor("_Color", hairColor);
-		body [FACE_BACK].sharedMaterial.SetColor("_Color", hairColor);
-		body [EYEBROW].sharedMaterial.SetColor("_Color", hairColor);
+		hair [EAR].sharedMaterial.SetColor("_Color", c_ear_color);
+		hair [HAIR_B].sharedMaterial.SetColor("_Color", c_hair_b_color);
+		hair [HAIR_F].sharedMaterial.SetColor("_Color", c_hair_f_color);
+		hair [HAIR_S].sharedMaterial.SetColor("_Color", c_hair_s_color);
+		hair [TAIL].sharedMaterial.SetColor("_Color", c_tail_color);
+		body [FACE_BACK].sharedMaterial.SetColor("_Color", c_hair_b_color);
+		body [EYEBROW].sharedMaterial.SetColor("_Color", c_eyebrow_color);
 		body [EYE].sharedMaterial.SetColor("_Color", eyeColor);
 	}
 }
