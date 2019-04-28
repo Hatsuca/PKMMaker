@@ -45,6 +45,7 @@ public class PKMMaker : EditorWindow {
 	enum 尻尾 {猫尻尾,狐尻尾,兎尻尾}
 	enum 髪色 {紺,黄,白}
 
+	//---保存データ
 	衣服 e_clothes;
 	眉 e_eyebrow;
 	顔 e_face;
@@ -56,6 +57,9 @@ public class PKMMaker : EditorWindow {
 	尻尾 e_tail;
 	目色 e_eye;
 	髪色 e_hair_color;
+	Color clothesColor = Color.white;
+	Color hairColor = Color.white;
+	Color eyeColor = Color.white;
 	//毛色個別設定用
 	髪色 e_eyebrow_color;
 	髪色 e_ear_color;
@@ -69,13 +73,12 @@ public class PKMMaker : EditorWindow {
 	Color c_hair_f_color = Color.white;
 	Color c_hair_s_color = Color.white;
 	Color c_tail_color = Color.white;
-
-	Color clothesColor = Color.white;
-	Color hairColor = Color.white;
-	Color eyeColor = Color.white;
-	bool disableClothes = false;
+	//セッティング
 	bool eachColorSetting;
+	bool dynamicBoneSetting;
+
 	bool randomizePKM;
+	bool disableClothes = false;
 
 	String savePath;
 	bool isReset;
@@ -98,12 +101,14 @@ public class PKMMaker : EditorWindow {
 	//ルートボーン
 	Transform rootBone;
 
+	//body用AnimatorController
+	RuntimeAnimatorController bodyAnim;
+
 	//--------------------------------------------------------------------------
 	//あとやることリスト
-	//・ランダム生成？
 	//・アイテム変更追加
-	//・ダイナミックボーンの出力オンオフ
-	//・PrefabのルートにAvatarDescripter入れてそのまま使えるようにしたい
+	//・データを保持したスクリプタブルオブジェクトを同時にエクスポートするようにしてインポート(ロード)機能を追加する
+	//・アバターコピーして参照を完全に切ることはできないか。
 	//--------------------------------------------------------------------------
 
 	[MenuItem("Tool/PKMMaker")]
@@ -129,6 +134,7 @@ public class PKMMaker : EditorWindow {
 		clothesTex = pr.clothesTex;
 		hairTex = pr.hairTex;
 		rootBone = pr.rootBone;
+		bodyAnim = pr.bodyAnim;
 
 		body [EYEBROW].sharedMaterial.SetTexture ("_MainTex", bodyTex [TEX_EYEBROW]);
 		hair [EAR].sharedMaterial.SetTexture ("_MainTex", hairTex [TEX_EAR]);
@@ -143,6 +149,8 @@ public class PKMMaker : EditorWindow {
 			c.gameObject.SetActive (true);
 		foreach (SkinnedMeshRenderer h in hair)
 			h.gameObject.SetActive (true);
+
+		dynamicBoneSetting = true;
 	}
 
 	void OnDisable() {
@@ -218,7 +226,7 @@ public class PKMMaker : EditorWindow {
 			}
 			EditorGUILayout.Space ();
 			using (new GUILayout.HorizontalScope ()) {
-				e_ear_color = (髪色)EditorGUILayout.EnumPopup ("けもみみ色", e_ear_color, GUILayout.Width(300));
+				e_ear_color = (髪色)EditorGUILayout.EnumPopup ("耳色", e_ear_color, GUILayout.Width(300));
 				c_ear_color = EditorGUILayout.ColorField (c_ear_color);
 			}
 			using (new GUILayout.HorizontalScope ()) {
@@ -235,9 +243,6 @@ public class PKMMaker : EditorWindow {
 
 		randomizePKM = EditorGUILayout.Toggle ("ランダムぷちけも生成", randomizePKM);
 		EditorGUILayout.Space ();
-		eachColorSetting = EditorGUILayout.Toggle ("毛色の個別設定", eachColorSetting);
-		EditorGUILayout.Space ();
-
 
 		//変更点アップデート
 		if (EditorGUI.EndChangeCheck()) {
@@ -546,7 +551,11 @@ public class PKMMaker : EditorWindow {
 			hair [EAR_C].gameObject.SetActive (true);
 		}
 			
+		eachColorSetting = EditorGUILayout.Toggle ("毛色の個別設定", eachColorSetting);
+		EditorGUILayout.Space ();
 
+		dynamicBoneSetting = EditorGUILayout.Toggle ("DynamicBoneの自動設定", dynamicBoneSetting);
+		EditorGUILayout.Space ();
 
 		if (GUILayout.Button ("エクスポート", GUI.skin.button, GUILayout.Height(30))) {
 			
@@ -567,6 +576,7 @@ public class PKMMaker : EditorWindow {
 		//生成オブジェクト
 		GameObject newModel;
 		SkinnedMeshRenderer newRenderer;
+		Animator animator;
 		Mesh tmpMesh;
 		Texture2D tmpBodyTex;
 		Texture2D tmpClothesTex;
@@ -614,10 +624,10 @@ public class PKMMaker : EditorWindow {
 		tmpMesh = new Mesh ();
 		tmpMesh.CombineMeshes (combine, false);
 
-		Debug.Log ("メッシュ結合終了. 頂点数:" + tmpMesh.vertexCount);
+		Debug.Log ("メッシュ結合終了. 頂点数:" + tmpMesh.vertexCount + " ポリゴン数:" + tmpMesh.triangles.Length / 3);
 
 
-		//---ブレンドシェイプ割り当て
+		//ブレンドシェイプ割り当て
 		int vOffset = 0;
 
 		for (int iMesh = 0; iMesh < meshes.Length; iMesh++) {
@@ -717,13 +727,17 @@ public class PKMMaker : EditorWindow {
 			};
 		}
 
-		//---オブジェクト作成
+		//---bodyオブジェクト作成
 		newModel = new GameObject();
 		newModel.transform.SetParent (model.transform);
 		newModel.name = "body";
+		//SkinnedMeshRenderer追加
 		newRenderer = newModel.AddComponent <SkinnedMeshRenderer> ();
 		newRenderer.sharedMesh = AssetDatabase.LoadAssetAtPath<Mesh>(savePath + "/Model/Mesh.asset");
 		newRenderer.materials = materials;
+		//Animator追加
+		animator = newModel.AddComponent<Animator> ();
+		animator.runtimeAnimatorController = bodyAnim;
 
 
 		//---ボーン設定
@@ -757,22 +771,77 @@ public class PKMMaker : EditorWindow {
 		}
 		newRenderer.sharedMesh.boneWeights = bw;
 
-
-		//未使用ボーン非アクティブ化
+		//ボーン毎処理
+		bool missingDB = false;
 		for (int i = 0; i < newRenderer.bones.Length; i++) {
-			if (!usedBone[i]) newRenderer.bones [i].gameObject.SetActive (false);
+			Component[] components = newRenderer.bones [i].GetComponents<Component> ();
+
+			//DynamicBone処理
+			for (int j = components.Length - 1; j >= 0; --j) {
+				//未インポート
+				if (components [j] == null) {
+					DestroyImmediate (components [j]);
+					if (dynamicBoneSetting) missingDB = true;
+				//DynamicBone削除
+				}else if (components[j].GetType () == typeof(DynamicBone)) {
+					if (!dynamicBoneSetting || !usedBone[i])
+						DestroyImmediate (components [j]);
+				}
+			}
+			//未使用ボーン非アクティブ化
+			if (!usedBone[i]) {
+				newRenderer.bones [i].gameObject.SetActive (false);
+			}
 		}
+		if (missingDB) Debug.LogWarning ("DynamicBoneがインポートされていません");
+
 
 		ResetColor ();
 		isReset = true;
 
-		//不要オブジェクト削除
+
+		//---不要オブジェクト削除
 		foreach (SkinnedMeshRenderer u in unused) {
 			DestroyImmediate (u.gameObject);
 		}
 		DestroyImmediate (model.GetComponent<PrefabReference>());
 
-		//生成
+		//---AvatarDescriptor設定
+		var avatarDescriptor = model.GetComponent<VRCSDK2.VRC_AvatarDescriptor> ();
+		if (avatarDescriptor != null) {
+			SerializedObject serializedObject = new SerializedObject (avatarDescriptor);
+			serializedObject.Update ();
+
+			serializedObject.FindProperty ("lipSync").intValue = 3;
+			serializedObject.FindProperty ("VisemeSkinnedMesh").objectReferenceValue = newRenderer;
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(0).stringValue = "vrc.v_sil";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(1).stringValue = "vrc.v_PP";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(2).stringValue = "vrc.v_FF";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(3).stringValue = "vrc.v_TH";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(4).stringValue = "vrc.v_DD";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(5).stringValue = "vrc.v_kk";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(6).stringValue = "vrc.v_CH";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(7).stringValue = "vrc.v_SS";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(8).stringValue = "vrc.v_nn";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(9).stringValue = "vrc.v_RR";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(10).stringValue = "vrc.v_aa";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(11).stringValue = "vrc.v_E";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(12).stringValue = "vrc.v_ih";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(13).stringValue = "vrc.v_oh";
+			serializedObject.FindProperty("VisemeBlendShapes").GetArrayElementAtIndex(14).stringValue = "vrc.v_ou";
+
+			serializedObject.ApplyModifiedProperties ();
+		} else {
+			Component[] components = model.GetComponents<Component> ();
+			for (int i = components.Length - 1; i >= 0; --i) {
+				if (components [i] == null) {
+					DestroyImmediate (components [i]);
+				}
+			}
+			Debug.LogWarning ("VRC_SDKがインポートされていません");
+		}
+
+		//---生成
 		PrefabUtility.CreatePrefab (savePath + "/NewPKM.prefab", model);
 
 		DestroyImmediate (model);
