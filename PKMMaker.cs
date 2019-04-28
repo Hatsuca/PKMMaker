@@ -44,6 +44,7 @@ public class PKMMaker : EditorWindow {
 	enum 横髪 {普通,長い,短い,ふっくら,結び,外ハネ}
 	enum 尻尾 {猫尻尾,狐尻尾,兎尻尾}
 	enum 髪色 {紺,黄,白}
+	enum アイテム {なし,傘,幣,マイク,浮き輪}
 
 	//---保存データ
 	衣服 e_clothes;
@@ -57,6 +58,7 @@ public class PKMMaker : EditorWindow {
 	尻尾 e_tail;
 	目色 e_eye;
 	髪色 e_hair_color;
+	アイテム e_item;
 	Color clothesColor = Color.white;
 	Color hairColor = Color.white;
 	Color eyeColor = Color.white;
@@ -84,7 +86,7 @@ public class PKMMaker : EditorWindow {
 	bool isReset;
 
 	Vector2 _scrollPosition = Vector2.zero;
-	String texturePath = "Assets/PKMMaker/Texture/";
+	String texturePath = "Assets/PKMMaker/Models/Texture/";
 	String shader = "MMS/Mnmrshader1_3";
 	GameObject model;
 
@@ -109,6 +111,7 @@ public class PKMMaker : EditorWindow {
 	//・アイテム変更追加
 	//・データを保持したスクリプタブルオブジェクトを同時にエクスポートするようにしてインポート(ロード)機能を追加する
 	//・アバターコピーして参照を完全に切ることはできないか。
+	//・SDK入ってないとエラー吐くのには勝てなかったよ…
 	//--------------------------------------------------------------------------
 
 	[MenuItem("Tool/PKMMaker")]
@@ -117,7 +120,7 @@ public class PKMMaker : EditorWindow {
 	}
 
 	void OnEnable() {
-		titleContent = new GUIContent ("ぷちけもメーカー");
+		titleContent = new GUIContent ("プチけもメーカー");
 
 		GameObject prefab = (GameObject)AssetDatabase.LoadAssetAtPath ("Assets/PKMMaker/Models/Prefab/PKMCustom.prefab", typeof(GameObject));
 		model = Instantiate (prefab);
@@ -188,7 +191,7 @@ public class PKMMaker : EditorWindow {
 		e_hair_s = (横髪)EditorGUILayout.EnumPopup ("横髪", e_hair_s);
 		EditorGUILayout.Space ();
 		using (new GUILayout.VerticalScope (EditorStyles.helpBox)) {
-			GUILayout.Label ("ぷちけも");
+			GUILayout.Label ("プチけも");
 		}
 		e_ear = (耳)EditorGUILayout.EnumPopup ("耳", e_ear);
 		e_tail = (尻尾)EditorGUILayout.EnumPopup ("尻尾", e_tail);
@@ -236,12 +239,27 @@ public class PKMMaker : EditorWindow {
 		}
 		EditorGUILayout.Space ();
 		clothesColor = EditorGUILayout.ColorField ("衣服色補正", clothesColor);
+		EditorGUILayout.Space ();
+		using (new GUILayout.VerticalScope (EditorStyles.helpBox)) {
+			GUILayout.Label ("オプション");
+		}
+		e_item = (アイテム)EditorGUILayout.EnumPopup ("アイテム", e_item);
+		EditorGUILayout.Space ();
+
+
+		//ロード
+		using (new GUILayout.HorizontalScope ()) {
+			GUILayout.FlexibleSpace ();
+			if (GUILayout.Button ("プチけもみみ娘読み込み", GUI.skin.button, GUILayout.Width(200), GUILayout.Height(30))) {
+				
+			}
+		}
 
 		//スクロールここまで
 		EditorGUILayout.EndScrollView ();
 
 
-		randomizePKM = EditorGUILayout.Toggle ("ランダムぷちけも生成", randomizePKM);
+		randomizePKM = EditorGUILayout.Toggle ("ランダムプチけも生成", randomizePKM);
 		EditorGUILayout.Space ();
 
 		//変更点アップデート
@@ -261,10 +279,10 @@ public class PKMMaker : EditorWindow {
 
 			ResetColor ();
 
-			//ランダムぷちけも生成
+			//ランダムプチけも生成
 			if (randomizePKM) {
 				randomizePKM = false;
-				if (EditorUtility.DisplayDialog ("ぷちけもメーカー", "プチけもみみ娘をランダム生成します\nよろしいですか？\n(現在の状況は失われます)", "OK")) {
+				if (EditorUtility.DisplayDialog ("プチけもメーカー", "プチけもみみ娘をランダム生成します\nよろしいですか？\n(現在の状況は失われます)", "OK")) {
 					eachColorSetting = false;
 					e_clothes = (衣服)Enum.ToObject (typeof(衣服), UnityEngine.Random.Range (0, Enum.GetNames (typeof(衣服)).Length));
 					e_eyebrow = (眉)Enum.ToObject (typeof(眉), UnityEngine.Random.Range (0, Enum.GetNames (typeof(眉)).Length));
@@ -550,7 +568,7 @@ public class PKMMaker : EditorWindow {
 			hair [TAIL].gameObject.SetActive (true);
 			hair [EAR_C].gameObject.SetActive (true);
 		}
-			
+
 		eachColorSetting = EditorGUILayout.Toggle ("毛色の個別設定", eachColorSetting);
 		EditorGUILayout.Space ();
 
@@ -783,7 +801,7 @@ public class PKMMaker : EditorWindow {
 					DestroyImmediate (components [j]);
 					if (dynamicBoneSetting) missingDB = true;
 				//DynamicBone削除
-				}else if (components[j].GetType () == typeof(DynamicBone)) {
+				}else if (components[j].GetType ().Name == "DynamicBone") {
 					if (!dynamicBoneSetting || !usedBone[i])
 						DestroyImmediate (components [j]);
 				}
@@ -807,7 +825,7 @@ public class PKMMaker : EditorWindow {
 		DestroyImmediate (model.GetComponent<PrefabReference>());
 
 		//---AvatarDescriptor設定
-		var avatarDescriptor = model.GetComponent<VRCSDK2.VRC_AvatarDescriptor> ();
+		var avatarDescriptor = model.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
 		if (avatarDescriptor != null) {
 			SerializedObject serializedObject = new SerializedObject (avatarDescriptor);
 			serializedObject.Update ();
@@ -847,7 +865,7 @@ public class PKMMaker : EditorWindow {
 		DestroyImmediate (model);
 		this.Close ();
 
-		EditorUtility.DisplayDialog ("ぷちけもメーカー", "アセット出力完了\n" + savePath + "/", "OK");
+		EditorUtility.DisplayDialog ("プチけもメーカー", "アセット出力完了\n" + savePath + "/", "OK");
 	}
 
 
