@@ -75,6 +75,8 @@ public class PKMMaker : EditorWindow {
 	Color c_hair_f_color = Color.white;
 	Color c_hair_s_color = Color.white;
 	Color c_tail_color = Color.white;
+	//選択アイテム
+	GameObject item;
 	//セッティング
 	bool eachColorSetting;
 	bool dynamicBoneSetting;
@@ -106,12 +108,12 @@ public class PKMMaker : EditorWindow {
 	//body用AnimatorController
 	RuntimeAnimatorController bodyAnim;
 
+	//アイテムルート
+	Transform rootItem;
+
 	//--------------------------------------------------------------------------
 	//あとやることリスト
-	//・アイテム変更追加
 	//・データを保持したスクリプタブルオブジェクトを同時にエクスポートするようにしてインポート(ロード)機能を追加する
-	//・アバターコピーして参照を完全に切ることはできないか。
-	//・SDK入ってないとエラー吐くのには勝てなかったよ…
 	//--------------------------------------------------------------------------
 
 	[MenuItem("Tool/PKMMaker")]
@@ -124,7 +126,7 @@ public class PKMMaker : EditorWindow {
 
 		GameObject prefab = (GameObject)AssetDatabase.LoadAssetAtPath ("Assets/PKMMaker/Models/Prefab/PKMCustom.prefab", typeof(GameObject));
 		model = Instantiate (prefab);
-		model.hideFlags = HideFlags.HideInHierarchy;
+		//model.hideFlags = HideFlags.HideInHierarchy;
 		foreach (SkinnedMeshRenderer child in model.GetComponentsInChildren<SkinnedMeshRenderer> ()) {
 			child.gameObject.SetActive (false);
 		}
@@ -138,6 +140,7 @@ public class PKMMaker : EditorWindow {
 		hairTex = pr.hairTex;
 		rootBone = pr.rootBone;
 		bodyAnim = pr.bodyAnim;
+		rootItem = pr.rootItem;
 
 		body [EYEBROW].sharedMaterial.SetTexture ("_MainTex", bodyTex [TEX_EYEBROW]);
 		hair [EAR].sharedMaterial.SetTexture ("_MainTex", hairTex [TEX_EAR]);
@@ -152,6 +155,9 @@ public class PKMMaker : EditorWindow {
 			c.gameObject.SetActive (true);
 		foreach (SkinnedMeshRenderer h in hair)
 			h.gameObject.SetActive (true);
+		rootItem.gameObject.SetActive (true);
+
+		item = null;
 
 		dynamicBoneSetting = true;
 	}
@@ -276,7 +282,7 @@ public class PKMMaker : EditorWindow {
 			hair [TAIL].gameObject.SetActive (false);
 			hair [EAR_C].gameObject.SetActive (false);
 			disableClothes = false;
-
+			if (item != null) item.SetActive (false);
 			ResetColor ();
 
 			//ランダムプチけも生成
@@ -542,7 +548,25 @@ public class PKMMaker : EditorWindow {
 				body[EYE].sharedMaterial = AssetDatabase.LoadAssetAtPath<Material> (texturePath + "body/Materials/eye_3.mat");
 				bodyTex [TEX_EYE_COLOR] = AssetDatabase.LoadAssetAtPath<Texture2D> (texturePath + "body/eye/eye_3.png");
 				break;
+			}switch (e_item) {
+			case アイテム.傘:
+				item = rootItem.GetChild (0).gameObject;
+				item.SetActive (true);
+				break;
+			case アイテム.幣:
+				item = rootItem.GetChild (1).gameObject;
+				item.SetActive (true);
+				break;
+			case アイテム.マイク:
+				item = rootItem.GetChild (2).gameObject;
+				item.SetActive (true);
+				break;
+			case アイテム.浮き輪:
+				item = rootItem.GetChild (3).gameObject;
+				item.SetActive (true);
+				break;
 			}
+
 
 			//色テクスチャ変更
 			body [EYEBROW].sharedMaterial.SetTexture ("_MainTex", bodyTex [TEX_EYEBROW]);
@@ -817,12 +841,17 @@ public class PKMMaker : EditorWindow {
 		ResetColor ();
 		isReset = true;
 
-
 		//---不要オブジェクト削除
 		foreach (SkinnedMeshRenderer u in unused) {
 			DestroyImmediate (u.gameObject);
 		}
+		for (int i = rootItem.childCount - 1; i >= 0; --i) {
+			if (!rootItem.GetChild (i).gameObject.activeSelf)
+				DestroyImmediate (rootItem.GetChild (i).gameObject);
+		}
 		DestroyImmediate (model.GetComponent<PrefabReference>());
+
+		rootItem.gameObject.SetActive (false);
 
 		//---AvatarDescriptor設定
 		var avatarDescriptor = model.GetComponent<VRCSDK2.VRC_AvatarDescriptor>();
