@@ -75,14 +75,15 @@ public class PKMMaker : EditorWindow {
 	Color c_hair_f_color = Color.white;
 	Color c_hair_s_color = Color.white;
 	Color c_tail_color = Color.white;
-	//選択アイテム
-	GameObject item;
 	//セッティング
 	bool eachColorSetting;
 	bool dynamicBoneSetting;
 
+	GameObject item;
+
 	bool randomizePKM;
 	bool disableClothes = false;
+	bool isLoad;
 
 	String savePath;
 	bool isReset;
@@ -111,10 +112,7 @@ public class PKMMaker : EditorWindow {
 	//アイテムルート
 	Transform rootItem;
 
-	//--------------------------------------------------------------------------
-	//あとやることリスト
-	//・データを保持したスクリプタブルオブジェクトを同時にエクスポートするようにしてインポート(ロード)機能を追加する
-	//--------------------------------------------------------------------------
+
 
 	[MenuItem("Tool/PKMMaker")]
 	static void Open() {
@@ -257,20 +255,27 @@ public class PKMMaker : EditorWindow {
 		using (new GUILayout.HorizontalScope ()) {
 			GUILayout.FlexibleSpace ();
 			if (GUILayout.Button ("プチけもみみ娘読み込み", GUI.skin.button, GUILayout.Width(200), GUILayout.Height(30))) {
-				
+				String loadPath = EditorUtility.OpenFilePanel ("プチけもみみ娘読み込み(PKMSettings.assetファイルを選択)", "Assets", "");
+				if (!String.IsNullOrEmpty (loadPath)) {
+					String[] transPath = Regex.Split (loadPath, "/Assets/");
+					loadPath = "Assets/" + transPath [1];
+					LoadPKM (loadPath);
+				}
 			}
 		}
 
 		//スクロールここまで
 		EditorGUILayout.EndScrollView ();
 
+		GUILayout.Box ("", GUILayout.ExpandWidth(true), GUILayout.Height(1));
 
 		randomizePKM = EditorGUILayout.Toggle ("ランダムプチけも生成", randomizePKM);
 		EditorGUILayout.Space ();
 
 		//変更点アップデート
-		if (EditorGUI.EndChangeCheck()) {
-			
+		if (EditorGUI.EndChangeCheck() || isLoad) {
+
+			isLoad = false;
 			clothes [CLOTHES].gameObject.SetActive (false);
 			body [EYEBROW].gameObject.SetActive (false);
 			body [FACE].gameObject.SetActive (false);
@@ -301,6 +306,9 @@ public class PKMMaker : EditorWindow {
 					e_tail = (尻尾)Enum.ToObject (typeof(尻尾), UnityEngine.Random.Range (0, Enum.GetNames (typeof(尻尾)).Length));
 					e_eye = (目色)Enum.ToObject (typeof(目色), UnityEngine.Random.Range (0, Enum.GetNames (typeof(目色)).Length));
 					e_hair_color = (髪色)Enum.ToObject (typeof(髪色), UnityEngine.Random.Range (0, Enum.GetNames (typeof(髪色)).Length));
+					clothesColor = Color.white;
+					hairColor = Color.white;
+					eyeColor = Color.white;
 				}
 			}
 
@@ -575,7 +583,6 @@ public class PKMMaker : EditorWindow {
 			hair [HAIR_F].sharedMaterial.SetTexture ("_MainTex", hairTex [TEX_HAIR_F]);
 			hair [HAIR_S].sharedMaterial.SetTexture ("_MainTex", hairTex [TEX_HAIR_S]);
 			hair [TAIL].sharedMaterial.SetTexture ("_MainTex", hairTex [TEX_TAIL]);
-
 
 			//色補正適用
 			SetColor();
@@ -891,6 +898,9 @@ public class PKMMaker : EditorWindow {
 		//---生成
 		PrefabUtility.CreatePrefab (savePath + "/NewPKM.prefab", model);
 
+		AssetDatabase.CreateAsset (SavePKM(), savePath + "/PKMSettings.asset");
+		AssetDatabase.Refresh ();
+
 		DestroyImmediate (model);
 		this.Close ();
 
@@ -977,5 +987,88 @@ public class PKMMaker : EditorWindow {
 		body [FACE_BACK].sharedMaterial.SetColor("_Color", c_hair_b_color);
 		body [EYEBROW].sharedMaterial.SetColor("_Color", c_eyebrow_color);
 		body [EYE].sharedMaterial.SetColor("_Color", eyeColor);
+	}
+		
+	void LoadPKM(String path) {
+		var pkm = AssetDatabase.LoadAssetAtPath<PKMSave> (path);
+
+		if (pkm != null) {
+			
+			e_clothes = (衣服)Enum.ToObject(typeof(衣服), pkm.e_clothes);
+			e_eyebrow = (眉)Enum.ToObject(typeof(眉), pkm.e_eyebrow);
+			e_face = (顔)Enum.ToObject(typeof(顔), pkm.e_face);
+			e_ear = (耳)Enum.ToObject(typeof(耳), pkm.e_ear);
+			e_mouth_def = (口)Enum.ToObject(typeof(口), pkm.e_mouth_def);
+			e_hair_b = (後髪)Enum.ToObject(typeof(後髪), pkm.e_hair_b);
+			e_hair_f = (前髪)Enum.ToObject(typeof(前髪), pkm.e_hair_f);
+			e_hair_s = (横髪)Enum.ToObject(typeof(横髪), pkm.e_hair_s);
+			e_tail = (尻尾)Enum.ToObject(typeof(尻尾), pkm.e_tail);
+			e_eye = (目色)Enum.ToObject(typeof(目色), pkm.e_eye);
+			e_hair_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_hair_color);
+			e_item = (アイテム)Enum.ToObject(typeof(アイテム), pkm.e_item);
+			clothesColor = pkm.clothesColor;
+			hairColor = pkm.hairColor;
+			eyeColor = pkm.eyeColor;
+			//毛色個別設定用
+			e_eyebrow_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_eyebrow_color);
+			e_ear_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_ear_color);
+			e_hair_b_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_hair_b_color);
+			e_hair_f_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_hair_f_color);
+			e_hair_s_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_hair_s_color);
+			e_tail_color = (髪色)Enum.ToObject(typeof(髪色), pkm.e_tail_color);
+			c_eyebrow_color = pkm.c_eyebrow_color;
+			c_ear_color = pkm.c_ear_color;
+			c_hair_b_color = pkm.c_hair_b_color;
+			c_hair_f_color = pkm.c_hair_f_color;
+			c_hair_s_color = pkm.c_hair_s_color;
+			c_tail_color = pkm.c_tail_color;
+			//セッティング
+			eachColorSetting = pkm.eachColorSetting;
+			dynamicBoneSetting = pkm.dynamicBoneSetting;
+
+			isLoad = true;
+
+			EditorUtility.DisplayDialog ("プチけもメーカー", "読み込み完了！", "OK");
+		} else {
+			EditorUtility.DisplayDialog ("エラー", "PKMデータを読み込めませんでした", "OK");
+		}
+	}
+
+	PKMSave SavePKM() {
+		var saveData = ScriptableObject.CreateInstance<PKMSave> ();
+
+		saveData.e_clothes = (int)e_clothes;
+		saveData.e_eyebrow = (int)e_eyebrow;
+		saveData.e_face = (int)e_face;
+		saveData.e_ear = (int)e_ear;
+		saveData.e_mouth_def = (int)e_mouth_def;
+		saveData.e_hair_b = (int)e_hair_b;
+		saveData.e_hair_f = (int)e_hair_f;
+		saveData.e_hair_s = (int)e_hair_s;
+		saveData.e_tail = (int)e_tail;
+		saveData.e_eye = (int)e_eye;
+		saveData.e_hair_color = (int)e_hair_color;
+		saveData.e_item = (int)e_item;
+		saveData.clothesColor = clothesColor;
+		saveData.hairColor = hairColor;
+		saveData.eyeColor = eyeColor;
+		//毛色個別設定用
+		saveData.e_eyebrow_color = (int)e_eyebrow_color;
+		saveData.e_ear_color = (int)e_ear_color;
+		saveData.e_hair_b_color = (int)e_hair_b_color;
+		saveData.e_hair_f_color = (int)e_hair_f_color;
+		saveData.e_hair_s_color = (int)e_hair_s_color;
+		saveData.e_tail_color = (int)e_tail_color;
+		saveData.c_eyebrow_color = c_eyebrow_color;
+		saveData.c_ear_color = c_ear_color;
+		saveData.c_hair_b_color = c_hair_b_color;
+		saveData.c_hair_f_color = c_hair_f_color;
+		saveData.c_hair_s_color = c_hair_s_color;
+		saveData.c_tail_color = c_tail_color;
+		//セッティング
+		saveData.eachColorSetting = eachColorSetting;
+		saveData.dynamicBoneSetting = dynamicBoneSetting;
+
+		return saveData;
 	}
 }
