@@ -850,7 +850,9 @@ public class PKMMaker : EditorWindow {
 
 		//---不要オブジェクト削除
 		foreach (SkinnedMeshRenderer u in unused) {
-			DestroyImmediate (u.gameObject);
+			if (u.transform.parent.gameObject == model) {
+				DestroyImmediate (u.gameObject);
+			}
 		}
 		for (int i = rootItem.childCount - 1; i >= 0; --i) {
 			if (!rootItem.GetChild (i).gameObject.activeSelf)
